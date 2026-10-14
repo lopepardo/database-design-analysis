@@ -38,12 +38,16 @@ CREATE TABLE car (
         REFERENCES garage (garage_id)
         ON DELETE RESTRICT
 );
+-- Pending rule: define when a reservation is considered past and delete it.
 CREATE TABLE reservation (
     reservation_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
+    -- Pending rule: keep this equal to SUM(rental_price) of the reservation's details.
+    -- Recalculate it when cars or their rental prices change.
     total_price DECIMAL(12,2) NOT NULL,
     -- TRUE when all cars in the reservation have been returned.
+    -- Setting this flag does not delete the reservation.
     returned BOOLEAN NOT NULL DEFAULT FALSE,
     customer_code INTEGER NOT NULL,
     agency_id INTEGER NOT NULL,
@@ -67,7 +71,9 @@ CREATE TABLE reservation (
 
 -- 3. Junction table for the many-to-many relationship between reservations and cars.
 -- Each row stores the gasoline level and rental price of a car for a reservation.
--- The application must ensure that each reservation contains at least one car.
+-- Pending rule: each reservation must contain at least one car.
+-- Check this when creating a reservation or deleting/moving details, before COMMIT.
+-- Pending rule: prevent overlapping reservation dates for the same car.
 CREATE TABLE reservation_details (
     reservation_id INTEGER NOT NULL,
     license_plate VARCHAR(20) NOT NULL,
@@ -80,6 +86,7 @@ CREATE TABLE reservation_details (
     CONSTRAINT fk_reservation_details_reservation
         FOREIGN KEY (reservation_id)
         REFERENCES reservation (reservation_id)
+        -- CASCADE removes details only when the reservation itself is deleted.
         ON DELETE CASCADE,
 
     CONSTRAINT fk_reservation_details_car
